@@ -1,62 +1,33 @@
-基于google官方3.4.1版本的protobuf c#-runtime以及3.4.0版本的protoc修改而来，可用于ILRuntime，同时移除了不常用的功能，精简了生成代码的体积.  
-当用于ILRuntime时，protobuf-runtime放在主工程（不可热更），让解析pb的代码跑在CLR上，提供更快的解析速度; 从.proto生成的c#代码放在热更dll工程(可热更).  
+# ILRuntime Protobuf
 
-已知限制:  
-  1，只支持proto3协议，不支持proto2  
-  2, 不支持WellKnownTypes，也就是.proto里不支持Any、TimeSpan、Duration等google.protobuf下预定义的.proto类型  
-  3，不支持JsonParser、FileDescriptor等反射功能  
-  4，.proto里不支持Map和oneof - 实现上应该是用到了反射，没细看，不确定能否在不支持反射的情况支持这个.  
-  5，protoc.exe不支持中文路径,也就是.proto不要放在中文目录下  
+此仓库修改自 [protobuf3-for-Unity-and-ILRuntime][1]。记录方便以后查看。
 
-修改的内容：  
-  1, runtime   
-     兼容.net framework 3.5
-  
-  2, runtime & protroc   
-     移除了反射部分
+相关限制可参考原项目 [readme][2]。
 
-  3，runtime    
-     移除了WellKnownTypes   
-     注: WellKnownTypes只是从google默认定义的一组(常用).proto文件生成的代码，随runtime自带，因为我们改了runtime,所以自带的这些代码（从老的protoc生成）会有编译错误，如果你需要这个功能，处理一下编译错误就好，我是嫌麻烦整个都砍了.   
+## 使用方式
 
-  4, runtime & protoc   
-     移除了Clone等(我们项目)用不到的方法
-     
-  5, runtime & protoc   
-     移除了各种(我们项目)不需要的继承和接口，以精简ILRuntime的跨域继承.   
-  
-  6, runtime & protoc   
-     移除了ToString()方法，因为默认实现需要用到FileDescriptor; 提供了Dumper.DumpAsString()方法来替代ToString方法，打印一个pb obj中所有filed的name和value，便于调试.   
-     注：Dumper只有配合精简过的protoc生成代码才能正常使用，因为里面有个假设: pb obj中所有的public NonStatic getter都是.proto中定义的field，而原版protoc生成的代码并不满足这个假设.
+将 `Google.Protobuf` 下的源文件放到 Unity 工程下。
 
+使用 `Protoc_3.4.0_bin/tool` 下的 protoc 将 .proto 文件转换成 .cs 文件。
 
-目录结构：  
-1，old - 未修改的原版pb:  
-   1.1，Google.Protobuf  
-       protobuf的runtime  
+```
+// 要将花括号中的变量替换成相应的路径
+protoc -I={protobufPath} --csharp_out={codeOutputDirectory} {protoPath}
+```
 
-   1.2  Protoc_3.4.0_bin  
-       预生成好的windows版.proto编译器，从.proto生成c#文件
+## 集成到 ILRuntime
 
-   1.3 protoc_3.4.0_src  
-       protoc源码，已生成vs2013工程
+protoc 生成的 cs 文件要放到热更工程下，因为 protoc 生成 cs 文件中用到了 Unity 主工程的 IMessage 接口，根据 [ILRuntime 中跨域继承][3]，我们需要实现一个适配器，在仓库的 `ProtobufAdaptor.cs` 也有提供。在注册 ILRuntime 需要注册这个适配器。
 
-2, new - 修改后的可用于ILRuntime的pb:  
-  2.1，Google.Protobuf
-       protobuf的runtime，放在主工程
-  
-  2.2, Protoc_3.4.0_bin  
-      预生成好的windows版.proto编译器，从.proto生成c#文件，这些生成文件放在热更工程
+```C#
+HotfixDomain.RegisterCrossBindingAdaptor(new ProtobufMessageAdaptor());
+HotfixDomain.DelegateManager.RegisterFunctionDelegate<ProtobufMessageAdaptor.Adaptor>();
+```
 
-  2.3 protoc_3.4.0_src  
-     修改后的protoc源码，已生成vs2013工程
-  
-  *2.4, Adapt_IMessage.cs和AdaptHelper.cs  
-      ILRuntime跨域继承适配器，只需要适配IMessage接口就行，.proto生成代码都是继承于这个接口.放到主工程，ILRutime初始化时注册这个适配继承器。
-      如果不用ILRuntime，不需要此文件.
+---
 
-3, test - 测试用的.proto和test case  
+PS：相较于原作者主要新增的是 MacOS 平台下的 protoc 编译器，原作者提供了 protoc 的源代码，位于 `Protoc_3.4.0_src`，可以自行通过 cmake 编译。
 
-
-
-
+[1]: https://github.com/gongxun/protobuf3-for-Unity-and-ILRuntime
+[2]: https://github.com/gongxun/protobuf3-for-Unity-and-ILRuntime/blob/master/readme.md
+[3]: https://ourpalm.github.io/ILRuntime/public/v1/guide/cross-domain.html
