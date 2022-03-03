@@ -26,7 +26,7 @@ HotfixDomain.DelegateManager.RegisterFunctionDelegate<ProtobufMessageAdaptor.Ada
 
 ---
 
-PS：相较于原作者主要新增的是 MacOS 平台下的 protoc 编译器，原作者提供了 protoc 的源代码，位于 `Protoc_3.4.0_src`，可以自行通过 cmake 编译。
+PS：相较于原作者主要新增的是 macOS 平台下的 protoc 编译器，原作者提供了 protoc 的源代码，位于 `Protoc_3.4.0_src`，可以自行通过 cmake 编译。
 
 [1]: https://github.com/gongxun/protobuf3-for-Unity-and-ILRuntime
 [2]: https://github.com/gongxun/protobuf3-for-Unity-and-ILRuntime/blob/master/readme.md
